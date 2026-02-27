@@ -57,15 +57,9 @@ npm run build
 
 ## Cloudflare Pages deployment
 
-Deploy this as a static Vite site.
+Deploy this as a static Vite site and publish `dist/` only.
 
-**Build settings:**
-
-- Framework preset: `Vite`
-- Build command: `npm run build`
-- Build output directory: `dist`
-- Root directory: `/` (repo root)
-- Node version: `18+` (recommended `20`)
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for the required Cloudflare settings and smoke-test checklist.
 
 ## Where to replace placeholder pricing/bands first
 
