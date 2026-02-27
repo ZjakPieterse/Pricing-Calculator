@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && npm run verify:publish",
+    "build": "vite build && node scripts/verify-build.mjs",
     "preview": "vite preview",
-    "verify:publish": "node scripts/verify-publish-html.mjs dist/index.html",
+    "verify:build": "node scripts/verify-build.mjs dist/index.html",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --ext ts,tsx --max-warnings 0",
