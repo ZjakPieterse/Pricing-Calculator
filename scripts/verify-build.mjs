@@ -1,22 +1,42 @@
 import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 
-const filePath = process.argv[2] ?? 'dist/index.html';
+const outDir = process.env.BUILD_OUTPUT_DIR || 'dist';
+const indexPath = path.join(outDir, 'index.html');
 
-if (!existsSync(filePath)) {
-  console.error(`[build-check] Expected built HTML at ${filePath}, but the file does not exist.`);
+if (!existsSync(indexPath)) {
+  console.error(`[verify:build] ERROR: Missing build artifact: ${indexPath}`);
+  console.error('[verify:build] Ensure the build step completed and BUILD_OUTPUT_DIR points to the deployed output directory.');
   process.exit(1);
 }
 
-const html = readFileSync(filePath, 'utf8');
-const bannedPatterns = ['/src/', '.tsx'];
-const matches = bannedPatterns.filter((pattern) => html.includes(pattern));
+const html = readFileSync(indexPath, 'utf8');
 
-if (matches.length > 0) {
-  console.error(
-    `[build-check] Build output is unsafe for deployment. ${filePath} still references source entries: ${matches.join(', ')}.`
-  );
-  console.error('[build-check] Ensure Cloudflare Pages deploys built output (dist/) and never repo root index.html.');
+const forbiddenChecks = [
+  { name: '/src/', regex: /\/src\// },
+  { name: 'main.tsx', regex: /main\.tsx\b/ },
+  { name: '.tsx', regex: /\.tsx\b/ },
+  { name: '@vite/client', regex: /@vite\/client/ }
+];
+
+const forbiddenMatches = forbiddenChecks
+  .filter(({ regex }) => regex.test(html))
+  .map(({ name }) => name);
+
+if (forbiddenMatches.length > 0) {
+  console.error(`[verify:build] ERROR: ${indexPath} contains forbidden dev references: ${forbiddenMatches.join(', ')}`);
+  console.error('[verify:build] Refusing deployment because this does not look like a production Vite build.');
   process.exit(1);
 }
 
-console.log(`[build-check] OK: ${filePath} references bundled assets only.`);
+const hasBundledModuleScript = /<script\s+[^>]*type=["']module["'][^>]*src=["'][^"']*assets\/[^"']+\.js(?:\?[^"']*)?["'][^>]*>/i.test(
+  html
+);
+
+if (!hasBundledModuleScript) {
+  console.error(`[verify:build] ERROR: ${indexPath} is missing a production module script tag for assets/*.js`);
+  console.error('[verify:build] Expected something like <script type="module" src="/assets/index-*.js"></script>.');
+  process.exit(1);
+}
+
+console.log(`[verify:build] OK: ${indexPath} passed production build integrity checks.`);
